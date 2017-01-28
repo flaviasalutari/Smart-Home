@@ -1,0 +1,153 @@
+html{
+	position: relative;
+	min-height: 100%;
+}
+
+body {
+	background:url(../images/bg-body.jpg);
+	/*font-size:12px;
+	margin:0;
+	font-family:Arial, Helvetica, sans-serif;*/
+	margin-bottom: 60px;
+}
+
+.navbar-default{
+	background: -moz-linear-gradient(80% 100% 90deg, #F2F2F2, #D6D6D6); /*FOR FIREFOX*/
+	background: -webkit-gradient(linear, center top, center bottom, from(#C8C8C8), to(#F2F2F2)); /*FOR CHROME*/
+}
+
+.footer {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+}
+.footer-background{
+	height: 60px;
+	background:url(../images/Bg-Footer-Andrian.jpg) repeat-x;
+}
+
+.text-footer{
+	color:#CCC;
+	float:left;
+	margin:20px 0; 
+}
+
+.text-footer-r{
+	color:#CCC;
+	float:right;
+	margin:20px 0; 
+}
+
+.head{
+	color:#e49e06;
+	font-size:20px;
+	font-weight:400;
+	letter-spacing:.1em;
+	line-height:24px;
+	margin-bottom:3px;
+	margin-top:50px;
+}
+.head-left{
+	text-align:left;
+}
+.head-right{
+	text-align:right;
+}
+
+.parag{
+	color:#A3A3A3;
+	text-align:justify;
+	margin-bottom: 10px;
+	margin-top: 10px;
+}
+
+.list{
+	color:#A3A3A3;
+	list-style:none;
+	margin:0;	
+}
+
+.margin-top{
+	margin-top: 30px;
+}
+
+.margin-bottom{
+	margin-bottom: 35px;
+}
+
+.nav-sidebar > .active > a,
+.nav-sidebar > .active > a:hover,
+.nav-sidebar > .active > a:focus {
+	color : #fff;
+	background-color: #428bca;
+}
+
+.nav-sidebar {
+	margin-top: 20px;
+}
+
+
+/*#rooms .chart-wrapper:hover {
+  /*margin-top: -10px;
+  -webkit-transition: margin-top 0.1s linear;
+  transition: margin-top 0.1s linear;
+    -webkit-transition: all 300ms ease-in;
+    -webkit-transform: scale(1.05); 
+    -ms-transition: all 300ms ease-in;
+    -ms-transform: scale(1.05); 
+    -moz-transition: all 300ms ease-in;
+    -moz-transform: scale(1.05);
+    transition: all 300ms ease-in;
+    transform: scale(1.05); 
+}*/
+
+/*#rooms .col-md-3:hover {
+  /*margin-top: -10px;
+  -webkit-transition: margin-top 0.1s linear;
+  transition: margin-top 0.1s linear;
+    -webkit-transition: all 300ms ease-in;
+    -webkit-transform: scale(1.05); 
+    -ms-transition: all 300ms ease-in;
+    -ms-transform: scale(1.05); 
+    -moz-transition: all 300ms ease-in;
+    -moz-transform: scale(1.05);
+    transition: all 300ms ease-in;
+    transform: scale(1.05); 
+}*/
+
+#rooms ul {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+  margin-top: 10px;
+}
+#rooms li {
+  margin-bottom: 30px;
+}
+#rooms .checkIcon {
+  font-family: "FontAwesome";
+  content: "\f00c";
+}
+#rooms li::before {
+  font-family: "FontAwesome";
+  /*content: "\f00c";*/
+  content: "\00b7";
+  font-size: 1.3rem;
+  color: #428bca ;
+  margin-right: 3px;
+}
+
+
+
+.paragB{
+	color:#A3A3A3;
+}
+
+.roomname{
+  font-size: 45px;
+  color: gray;
+}
+
+.sub-title{
+  color: #428bca;
+}

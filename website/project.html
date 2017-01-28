@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang ="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Project - Smart Home</title>
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="css/index.css">
+</head>
+<body>
+	<!-- HEADER -->
+	<div class="container">
+		<nav class="navbar navbar-default">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse" aria-expanded="false" aria-controls="navbar">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="index.php">Smart Home</a>
+			</div>
+
+			<div class="navbar-collapse collapse" id="navbar">
+				<ul class="nav navbar-nav">
+					<li><a href="index.php" data-toggle="collapse" data-target=".navbar-collapse.in">Home</a></li>
+					<li class="active"><a href="project.html" data-toggle="collapse" data-target=".navbar-collapse.in">Project</a></li>
+					<li><a href="code.html" data-toggle="collapse" data-target=".navbar-collapse.in">Code</a></li>
+					<li><a href="about.html" data-toggle="collapse" data-target=".navbar-collapse.in">About</a></li>
+					<li><a href="contact.html" data-toggle="collapse" data-target=".navbar-collapse.in">Contact</a></li>
+				</ul>
+ 				<ul class="nav navbar-nav navbar-right">
+ 				<!--<li><a href="signin" data-toggle="modal" data-target=".bs-example-modal-sm">Login / Register</a></li>-->
+				</ul> 
+			</div>
+
+		</div> <!-- container full -->
+		</nav>
+	</div> <!-- END HEADER -->
+
+	<!-- Body -->
+	<div class="container">	
+		<div class="row margin-top">
+			<div class="col-md-1"></div>
+			<div class="col-md-6">
+				<h3 class="head head-left">Smart</h3>
+				<p class="parag">
+					The core of the project runs on the Raspberry Pi 2 B+ and it's able to take decisions, interpretate messages and add new configurations.  
+				</p>
+			</div>
+			<div class="col-md-1"></div>
+			<div class="col-md-3">
+				<a><img src="images/raspberry.png" alt=""></a>
+			</div>
+			<div class="col-md-1"></div>
+		</div>
+
+		<div class="row margin-top">
+			<div class="col-md-1"></div>
+			<div class="col-md-6">
+				<h3 class="head head-left">Actuator</h3>
+				<p class="parag">
+					The decisions taken by the Raspberry are actuaded by the Arduino Uno that waits for commands and replies.  
+				</p>
+			</div>
+			<div class="col-md-1"></div>
+			<div class="col-md-3">
+				<a><img src="images/arduino.png" alt=""></a>
+			</div>
+			<div class="col-md-1"></div>
+		</div>
+
+		<div class="row margin-top" style="padding-bottom:150px">
+			<div class="col-md-1"></div>
+			<div class="col-md-6">
+				<h3 class="head head-left">Communications</h3>
+				<p class="parag">
+					The communications between the elements inside the network is made through mqtt.  
+				</p>
+			</div>
+			<div class="col-md-1"></div>
+			<div class="col-md-3">
+				<a><img src="images/mqtt.png" class="margin-top"></a>
+			</div>
+			<div class="col-md-1"></div>
+		</div>
+
+		<div class="row">
+			<div class="col-sm-offset-2 col-sm-8">
+				<div class="embed-responsive embed-responsive-16by9">
+				<iframe id="iframe_container" frameborder="0" webkitallowfullscreen="" mozallowfullscreen="" allowfullscreen="" src="https://prezi.com/embed/oeowczvf7zio/?bgcolor=ffffff&amp;lock_to_path=1&amp;autoplay=0&amp;autohide_ctrls=0&amp;landing_data=bHVZZmNaNDBIWnNjdEVENDRhZDFNZGNIUE43MHdLNWpsdFJLb2ZHanI0dCs2VEw2bUVqUFdvbWQyQXNzNWg4VXZnPT0&amp;landing_sign=zbr0vsOoGLuQX5NIa4upOHeYHDmCzYbW-LtBF6bSIyY"></iframe>
+				</div>		
+			</div>
+		</div>
+
+		<div style="padding:50px"></div>
+
+		 <div class="row">
+    		<div class="col-sm-6">
+			<div class="embed-responsive embed-responsive-16by9">
+				<iframe src="https://www.youtube.com/embed/93t5PMqlfAQ" frameborder="0" allowfullscreen></iframe>
+			</div>
+			</div>
+			<div class="col-sm-6">
+			<div class="embed-responsive embed-responsive-16by9">
+   				<iframe src="https://www.youtube.com/embed/0hba6RM9mZo" frameborder="0" allowfullscreen></iframe>
+			</div>
+			</div>
+		</div>
+
+<div style="padding:100px"></div>
+
+
+	</div>
+
+<!-- Small modal -->
+<div class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" id="myModal" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+    	<br>
+           <div class="bs-example bs-example-tabs" style="padding-left: 10px;padding-right: 10px">
+	            <ul id="myTab" class="nav nav-tabs" style="padding-left: 10px;padding-right: 10px">
+	            	<li class="active"><a href="#signin" data-toggle="tab">Sign In</a></li>
+	            	<li><a href="#register" data-toggle="tab">Register</a></li>
+	              	<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+	            </ul>
+        	</div>
+
+        <div class="modal-body">
+        <div id="myTabContent" class="tab-content">
+  			<div class="tab-pane fade active in" id="signin">
+	    		<form method="post" action="php/login.php" name ="register">
+	    			<fieldset>
+					<div class="form-group" style="padding-top: 5px">
+						<div class="input-group">
+							<input type="email" class="form-control" name="email" placeholder="Email">
+							<label for="uLogin" class="input-group-addon glyphicon glyphicon-user"></label>
+						</div>
+					</div> <!-- /.form-group -->
+					<div class="form-group">
+						<div class="input-group">
+							<input type="password" class="form-control" name="password" placeholder="Password">
+							<label for="uPassword" class="input-group-addon glyphicon glyphicon-lock"></label>
+						</div>
+					</div> 
+					<div class="checkbox" style="padding-top: 5px;padding-bottom: 10px">
+						<label>
+							<input type="checkbox"> Remember me
+						</label>
+					</div> 
+		    		<div class="modal-footer">
+		    			<button type="submit" class="form-control btn btn-primary" name="SignIn">Sign In</button>
+		    		</div>
+		    		</fieldset>
+	    		</form>
+        	</div>
+
+  			<div class="tab-pane fade" id="register">
+	      		<form method="post" action="php/register.php" name ="register">
+	      			<fieldset>
+	      	    		<div class="form-group">
+	      	    			<p>Name</p>
+							<input type="text" name="name" class="form-control" placeholder="Name"></input>
+						</div>
+						<div class="form-group">
+							<p>Surname</p>
+							<input type="text" name="surname" class="form-control" placeholder="Surname"></input>
+						</div>
+			        	<div class="form-group">
+							<p>Email address</p>
+							<input type="email" name="email" class="form-control" placeholder="Email"></input>
+						</div>
+						<div class="form-group">
+							<p>Password</p>
+							<input type="password" name="password" class="form-control" placeholder="Password"></input>	
+						</div>
+						<div class="form-group">
+							<p id="errors"></p>
+						</div>
+						<div class="modal-footer">
+		    				<button type="submit" class="form-control btn btn-primary" name="Register">Register</button>
+		    			</div>
+					</fieldset>
+	      		</form>
+        	</div>
+       	 </div> <!-- Mytab content-->
+     </div> <!--modal body -->
+    </div>
+  </div>
+</div> <!--End Small Modal -->
+
+
+
+	<!-- FOOTER -->
+	<footer class="footer">
+		<div class="container">
+			<button type="button" class="btn btn-link btn-sm center-block" id="view-full" style="color:gray">Desktop Mode</button>
+		</div>
+		<div class="footer-background">
+			<div class="container">
+				<p class="text-footer">&#169; 2015 All Rights Reserved. &#169; Andrian 	Putina</p>
+			</div>
+		</div>
+	</footer>
+	<!-- END FOOTER -->
+
+	<script src="js/jquery-2.2.1.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+
+	<?php 
+		include 'php/errors.php';
+	?>
+
+
+	<script>
+	$(document).ready(function(){
+		$('#view-full').bind('click',function(){
+			$('meta[name="viewport"]').attr('content','width=1200');
+		});
+
+	});
+	</script>
+</body>
+</html>

@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang ="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Code - Smart Home</title>
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="css/index.css">
+
+	<link href="css/shCore.css" rel="stylesheet" type="text/css" />
+  	<link href="css/shThemeDefault.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+	<!-- HEADER -->
+	<div class="container">
+		<nav class="navbar navbar-default">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse" aria-expanded="false" aria-controls="navbar">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="index.php">Smart Home</a>
+			</div>
+
+			<div class="navbar-collapse collapse" id="navbar">
+				<ul class="nav navbar-nav">
+					<li><a href="index.php" data-toggle="collapse" data-target=".navbar-collapse.in">Home</a></li>
+					<li><a href="project.html" data-toggle="collapse" data-target=".navbar-collapse.in">Project</a></li>
+					<li class="active"><a href="code.html" data-toggle="collapse" data-target=".navbar-collapse.in">Code</a></li>
+					<li><a href="about.html" data-toggle="collapse" data-target=".navbar-collapse.in">About</a></li>
+					<li><a href="contact.html" data-toggle="collapse" data-target=".navbar-collapse.in">Contact</a></li>
+				</ul>
+ 				<ul class="nav navbar-nav navbar-right">
+ 				<!--<li><a href="signin" data-toggle="modal" data-target=".bs-example-modal-sm">Login / Register</a></li>-->
+				</ul> 
+			</div>
+
+		</div> <!-- container full -->
+		</nav>
+	</div> <!-- END HEADER -->
+
+	<!-- Body -->
+	<div class="container">
+
+<div>
+
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#arduino" aria-controls="home" role="tab" data-toggle="tab">Arduino</a></li>
+    <li role="presentation"><a href="#LightClient" aria-controls="profile" role="tab" data-toggle="tab">Light Client Raspberry</a></li>
+    <li role="presentation"><a href="#TemperatureClient" aria-controls="messages" role="tab" data-toggle="tab">Temperature Client Raspberry</a></li>
+    <li role="presentation"><a href="#Download" aria-controls="download" role="tab" data-toggle="tab">Download</a></li>
+  </ul>
+
+  <!-- Tab panes -->
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="arduino">
+    	<div class="head">
+	    	main:
+			<pre class="brush: cpp">
+#include "mqttclient.h"
+#include "temperature.h"
+#include "motion.h"
+#include "var.h"
+#include "touch.h"
+
+void setup() 
+{
+  pinMode(relayPin, OUTPUT);
+  pinMode(heatingPin, OUTPUT);
+  pinMode(coolingPin, OUTPUT);
+  pinMode(touchPin, OUTPUT);
+
+  SetupMotionPir();
+  StartMqtt();
+  StartDht();
+}
+
+void loop() 
+{
+  MotionPir();
+  RunClient();
+  DetectTouchSensor();
+}
+			</pre>
+    	</div>
+
+    	<div class="head">
+    		var.h:
+    		<pre class="brush: cpp">
+// *** 
+#define Room                          "Room1"
+
+// *** Pin *** //
+#define pirPin  6                                        //pir Pin
+#define relayPin 7                                       //relay Pin
+#define dhtPin 8                                         //temperature sensor Pin
+#define heatingPin 9                                     //heating Pin
+#define coolingPin 2                                     //cooling Pin
+#define touchPin A0                                      //touch Pin
+
+// *** Pir *** //
+#define calibrationTime 10                                //CalibrationTime for Pir
+
+// *** Dht *** //
+#define dhtType DHT11                                     //TemperatureSensor Type
+
+// *** Mqtt *** //
+#define LightSubscriptionTopic        "8/Room1/Light"                   //LightSubscription
+#define TemperatureSubscriptionTopic  "8/Room1/Temperature"             //TemperatureSubscription
+#define LightPublishTopic             "8/Room1/Light/Response"          //LightPublish
+#define LightPublishStateTopic        "8/Room1/Light/State"             //State
+#define TemperaturePublishTopic       "8/Room1/Temperature/Response"    //TemperaturePublish
+
+#define TurnNowPublishTopic           "8/Room1/Light/SetNow"
+#define MotionDetectedPublishTopic    "8/Room1/Light/Observe"
+
+#define ResponseToPirRequest          "PIR"
+#define ResponseToCommandsOnOff       "OnOffResponse"
+#define ResponseToTemp                "TempData"
+#define ResponseToCommandsTemp        "TempCommands"
+
+// *** Commands *** //
+#define TurnOnLightCommand            "ON"                            //TurnOnLight
+#define TurnOffLightCommand           "OFF"                           //TurnOffLight
+#define TemperatureRequestCommand     "GetTemp"                       //TemperatureRequest
+#define TimeOnLightCommand            "TimeOn"                        //TimeOnLight
+#define StartHeatingCommand           "TempUp"                        //TurnHeatingOn
+#define StartCoolingCommand           "TempDown"                      //TurnHeatingOff
+#define StopHeatingCoolingCommand     "TempLedOff"                    //StopHeatingCooling
+
+#define TurnOnLightNow                "SetOnNow"
+#define TurnOffLightNow               "SetOffNow"
+
+// *** For MQTT connection with password *** //
+#define User                          "ciao"
+#define Password                      "ciao"
+	</pre>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="head">
+	motion.cpp:
+	<pre class="brush: cpp">
+#include <Arduino.h>
+#include "motion.h"
+#include "var.h"
+#include "mqttclient.h"
+
+//start detection, stop detection and interval detection
+long unsigned int StartDetection,StopDetection, IntervalDetection;          
+ 
+bool lockLow = true;
+bool takeLowTime;  
+
+void SetupMotionPir()
+{
+    pinMode(pirPin, INPUT); // The program starts listen on pin of the pir
+    //Calibration
+    Serial.begin(115200);
+    Serial.print("calibrating sensor ");
+    for(int i = 0; i < calibrationTime; i++)  // Take some time to set up the motion sensor
+      {
+        Serial.print(".");
+        delay(1000);
+      }
+    Serial.println(" done");
+    Serial.println("SENSOR ACTIVE");
+    delay(50);
+}
+
+void MotionPir() // Check the status of the motion pir (if it has detected some movement)
+{
+     if(digitalRead(pirPin) == HIGH){
+       if(lockLow){         // This variable is used to not enter continuously in this statement but only once per motion detected
+         MotionDetected();  // Publish on the broker that it has detected a motion
+ 
+         lockLow = false;            
+         Serial.println("---");
+         Serial.print("motion detected at ");
+         StartDetection = millis()/1000;
+         Serial.print(StartDetection);
+         Serial.println(" sec"); 
+         delay(50);
+         }         
+         takeLowTime = true;
+       }
+     if(digitalRead(pirPin) == LOW){       // If a motion is not detected   
+       if(takeLowTime){                    // Perform this statement only once
+        takeLowTime = false;
+        lockLow = true;
+       
+        StopDetection = millis()/1000;
+                                
+        Serial.print("motion ended at ");      //output
+        Serial.print(StopDetection);
+        Serial.println(" sec");
+        delay(50);        
+        }
+
+       }
+    //Last Detection
+    IntervalDetection = millis()/1000 - StopDetection ;
+
+      
+}
+
+// Return how much time has passed from the last detection
+long unsigned int GetLastIntervalDetection()
+{
+  return IntervalDetection;
+}
+</pre>
+    	</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="head">
+	mqttclient.cpp:
+	<pre class="brush: cpp">
+#include "mqttclient.h"
+
+//*** MAC & IP ADDR ***//
+byte mac[]    = {  0xDE, 0xED, 0xBA, 0xFE, 0xFE, 0xAA };
+IPAddress ip(192, 168, 1, 135);
+IPAddress server(192, 168, 1, 254);
+
+// Define the client object that permit to receive and send mqtt messages
+EthernetClient ethClient;
+PubSubClient client(server, 1883, callback, ethClient); 
+
+long lastReconnectAttempt = 0;
+
+// Callback function that permit to retrieve messages from the broker
+void callback(char* topic, byte* payload, unsigned int length) {  
+  char *message = (char*)malloc(sizeof(char)*length); // The message is a series of char (json string) of length retrived by the callback function
+  
+  int i=0;
+  for (i=0; i<length; i++)
+  {
+    message[i]=(char)payload[i];
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+  
+  ReadMessage(message); // According to the json string perform the right function
+  
+  free(message);
+}
+
+boolean reconnect()
+{
+  if (client.connect("arduinoClient1")) // Try the connection
+  {
+      client.publish("Connections","Hello, I'm Arduino");
+      
+      client.subscribe(LightPublishStateTopic);     //Retrieve the State if arduino goes down (if there is something in retain, thanks to callback)
+      client.unsubscribe(LightPublishStateTopic);     //Need this topic only for the state
+      
+      client.subscribe(LightSubscriptionTopic, 1);     // Start the subscription on light topic 
+      client.subscribe(TemperatureSubscriptionTopic, 1); // Start the subscription on light topic
+  }
+  return client.connected();
+}
+
+void StartMqtt()
+{
+  Ethernet.begin(mac, ip);  // Set up the connection to the broker (raspberry) through the ethernet cable
+}
+
+void RunClient()
+{
+  if (!client.connected()) // If the client is not yet connected or lost the connection
+  {
+    long now = millis();
+    if (now-lastReconnectAttempt > 5000) // Performs an attempt of connection every 5 second
+    {
+      lastReconnectAttempt = now;
+      if (reconnect()) // Try the connection
+      {
+        lastReconnectAttempt = 0;
+      }
+    }
+  }
+  else
+  {
+   client.loop();   // If connected, continuously listen to the broker for new messages to handle
+  }
+  return; 
+}
+
+void ReadMessage(char *message) // Decode the json string and perform the right function
+{
+  if (!FlagState) // This statement will be entered only once to control if the arduino had a past state saved on the broker
+    {
+      if (ParseState(message)) // Control the state written in the retain message
+      {
+        ON = true;
+        digitalWrite(relayPin, HIGH);
+      }
+      FlagState = true; // Permit to enter this statement only once
+      return;
+    }
+  
+    int command = ParseCommand(message); // Decode the json string
+    switch(command)
+    {
+      //*** Turn on light ***//
+      case 1:
+            TurnOnLight();            
+            break;
+            
+      //*** Turn off light ***//
+      case 2:
+            TurnOffLight();
+            break;
+            
+      //*** Temperature Request ***//    
+      case 3:
+            TemperatureRequest();
+            break;
+            
+      //*** TimeOn Request ***//
+      case 4:
+            TimeOnRequest();
+            break;
+            
+      //*** Heating On Request ***//
+      case 5:
+            TurnOnHeating();
+            break;  
+            
+      //*** Cooling On Request ***//
+      case 6:
+            TurnOnCooling();
+            break;
+
+     //*** Cooling Heatinf OFF Request ***//
+      case 7:
+            TurnOffCoolingHeating();
+            break;  
+      }
+}
+
+void TurnOnLight() // Turn on the light and acknoledge the operation
+{
+  ON = true;
+  digitalWrite(relayPin, HIGH);
+  char *msg= CreateResponse(1);
+  client.publish(LightPublishStateTopic, msg, true);
+  return;
+}
+
+void TurnOffLight() // Turn off the light and acknoledge the operation
+{
+  ON = false;
+  digitalWrite(relayPin, LOW);
+  char *msg= CreateResponse(2);
+  client.publish(LightPublishStateTopic, msg, true);
+  return;
+}
+
+void TemperatureRequest() // Get and send the temperature and humidity values
+{
+  char *msg= CreateResponse(3);
+  delay(100);
+  client.publish(TemperaturePublishTopic, msg);
+  return;
+}
+
+void TimeOnRequest() // Got and sends how much time has passed from the the last motion detected
+{
+  char *msg = CreateResponse(4);
+  client.publish(LightPublishTopic, msg);
+  return;
+}
+
+void TurnOnHeating() // Turns on the heating system and acknoledge the operation
+{
+  digitalWrite(heatingPin, HIGH);
+  char *msg= CreateResponse(5);
+  client.publish(TemperaturePublishTopic, msg);
+  return;  
+}
+
+void TurnOnCooling() // Turns on the cooling system and acknoledge the operation
+{
+  digitalWrite(coolingPin, HIGH);
+  char *msg= CreateResponse(6);
+  client.publish(TemperaturePublishTopic, msg);
+  return;  
+}
+
+void TurnOffCoolingHeating() // Turns off the heating and cooling system and acknoledge the operation
+{
+  digitalWrite(coolingPin, LOW);
+  digitalWrite(heatingPin, LOW);
+  char *msg= CreateResponse(7);
+  client.publish(TemperaturePublishTopic, msg);
+  return;  
+}
+
+void TurnOnLightByTouch() // Send the json string to light on by touching of the light sensor
+{
+  digitalWrite(relayPin, HIGH);
+  char *msg= CreateResponse(1);
+  client.publish(LightPublishStateTopic, msg, true);
+  return;
+}
+
+void TurnOffLightByTouch() // Send the json string to light off by touching of the light sensor
+{
+  digitalWrite(relayPin, LOW);
+  char *msg= CreateResponse(2);
+  client.publish(LightPublishStateTopic, msg, true);
+  return;
+}
+
+void MotionDetected() // Publish that the motion sensor has detected something
+{
+  char *msg= CreateResponse(10);
+  client.publish(MotionDetectedPublishTopic, msg);
+  return;
+}
+	</pre>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="head">
+	parsejson.cpp:
+	<pre class="brush: cpp">
+#include "parseJson.h"
+#include "var.h"
+
+int ParseState(char* message) // Decode the retain message of the last state saved in the broker of the arduino
+{
+  int r;
+
+  StaticJsonBuffer<200> jsonBuffer;                  
+  JsonObject& root = jsonBuffer.parseObject(message);
+  const char* state = root["State"];
+
+  if ( strcmp(state,"ON") == 0 ) // If the state was "light on" return a 1
+  {
+    return r=1;
+  }
+  else
+  {
+    return r=0;
+  }
+}
+
+int ParseCommand(char* message) // Decode the json string
+{
+    int r;
+    StaticJsonBuffer<200> jsonBuffer;                  
+    JsonObject& root = jsonBuffer.parseObject(message);
+    
+    const char* command = root["command"];
+    
+        //***Turn on light, switch case 1***//
+        if ( strcmp(command,TurnOnLightCommand) == 0 )
+          {
+            return r=1;
+          }
+        //*** Turn of light, switch case 2***//
+        if ( strcmp(command,TurnOffLightCommand) == 0 )
+          {
+            return r=2;
+          }
+
+        //*** Temperature Request, switch case 3***//
+        if ( strcmp(command,TemperatureRequestCommand) == 0 )
+          {
+            return r=3;
+          }
+
+        //*** TimeOn Request, switch case 4***//
+        if ( strcmp(command,TimeOnLightCommand) == 0 )
+          {
+            return r=4;
+          }
+
+        //*** TurnOn Heating, switch case 5***//
+        if ( strcmp(command,StartHeatingCommand) == 0 )
+          {
+            return r=5;
+          }
+
+        //*** TurnOn Cooling, switch case 6***//
+        if ( strcmp(command,StartCoolingCommand) == 0 )
+          {
+            return r=6;
+          }
+       
+        //*** TurnOff Cooling and Heating, switch case 7***//
+        if ( strcmp(command,StopHeatingCoolingCommand) == 0 )
+          {
+            return r=7;
+          }
+          
+    //*** Default case ***//
+    return 0; 
+}
+
+char *CreateResponse(int value) // Create the json string to send to the broker
+{
+  StaticJsonBuffer<200> jsonBuffer;  
+  JsonObject& root = jsonBuffer.createObject();
+  
+  switch (value)
+    {  
+    case 1:
+    root["Room"] = Room;
+    root["State"] = "ON";
+    break;
+    
+    case 2:
+    root["Room"] = Room;
+    root["State"] = "OFF";
+    break;
+
+    case 3:
+    root["Room"] = Room;
+    root["Response"] = "OK";
+    root["Type"] = ResponseToTemp;
+    root["Temperature"] = GetTemperature();
+    delay(50);
+    root["Humidity"] = GetHumidity();   
+    break;
+
+    case 4:
+    root["Room"] = Room;
+    root["Response"] = "OK";
+    root["Type"] = ResponseToPirRequest;
+    root["LastDetection"] = GetLastIntervalDetection();
+    break;
+
+    case 5:
+    root["Room"] = Room;
+    root["Response"] = "OK";
+    root["Type"] = ResponseToCommandsTemp;
+    break;
+
+    case 6:
+    root["Room"] = Room;
+    root["Response"] = "OK";
+    root["Type"] = ResponseToCommandsTemp;
+    break;
+
+    case 7:
+    root["Room"] = Room;
+    root["Response"] = "OK";
+    root["Type"] = ResponseToCommandsTemp;
+    break;
+
+    case 8:
+    root["Room"] = Room;
+    root["Type"] = TurnOnLightNow;
+    break;
+
+    case 9:
+    root["Room"] = Room;
+    root["Type"] = TurnOffLightNow;
+    break;
+
+    case 10:
+    root["Room"] = Room;
+    root["Type"] = ResponseToPirRequest;
+    root["Movement"] = "Yep!";
+    break;
+    }
+
+    char buffer[256];
+    root.printTo(buffer, sizeof(buffer));
+    
+    return buffer;  
+}
+	</pre>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="head">
+	temperature.cpp:
+	<pre class="brush: cpp">
+#include "temperature.h"
+#include "var.h"
+
+// Define on which pin and what type of temperature measure should perform the temperature and humidity sensor
+DHT dht(dhtPin, dhtType); 
+
+float GetTemperature() // Return temperature value
+{
+  float t = dht.readTemperature();
+  return t;
+}
+
+float GetHumidity() // Return humidity value
+{
+  float h = dht.readHumidity();
+  return h;
+}
+
+void StartDht() // Start the temperature and humidity sensor
+{
+  dht.begin();
+}
+	</pre>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="head">
+	touch.cpp:
+	<pre class="brush: cpp">
+#include <Arduino.h>
+#include "touch.h"
+#include "mqttclient.h"
+
+bool ON = false;
+bool FlagState = false; // Used in mqtt client to retrieve the state if arduino for some reason goes down
+
+void DetectTouchSensor() // Detect if the touch sensor is pressed
+{
+  int ctsValue = analogRead(touchPin); // Get the voltage value from the touch sensor
+  //Serial.println(ctsValue);
+  
+  if ((ctsValue > 85) && (!ON)) // If the voltage is over the threshold and the button was off
+    {
+     ON = true;
+     TurnOnLightByTouch(); // Publish that the light was setted on
+     delay(1000);
+     return;  
+    }
+    
+  if ((ctsValue > 85) && (ON)) // If the voltage is over the threshold and the button was on
+    {
+      ON = false;    
+      TurnOffLightByTouch();  // Publish that the light was setted off
+      delay(1000);
+      return;  
+    } 
+}
+	</pre>
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+<div role="tabpanel" class="tab-pane" id="LightClient">
+	<div class="head">
+		client_light.py:
+		<pre class="brush: py">
+import paho.mqtt.client as mqtt #Library for mqtt communication
+import json # Library for handling json string
+from controllight import ControlLight
+from controllight import timesleep
+import sys # Library to handle system exception
+from home import Home
+import time
+import MySQLdb # Library to handle the Database
+from fileconfig import *
+
+casa = Home("",obj_email) #Create the instance of the Home class to handle the various operation
+
+def on_connect(client, userdata, flags, rc):
+  print("Connected with result code "+str(rc))  # Show the connection result
+  client.subscribe("#")               # Perform the subscription on every topic
+
+def on_message(client, userdata, msg):
+  print(msg.topic+" "+str(msg.payload)) # Print the messages coming from the broker for every topic
+
+def response_callback(client, userdata, msg):
+  casa.ParseResponse(client, msg.payload)
+
+def conf_callback(client, userdata, msg):
+  casa.ParseConfiguration(client, msg.payload)
+
+def State_callback(client, userdata, msg):
+  casa.overAll(msg.payload)
+
+def Listen_callback(client, userdata, msg):
+  casa.listen(client,msg.payload)
+
+def main():
+  try:
+    db = MySQLdb.connect(hostdB,usernamedB,passworddB,dBname) #Connect to the database to retrieve the rooms already saved
+    cursor = db.cursor()
+    email = "'"+casa.email_owner+"'"
+    sql = "SELECT * from rooms where rooms.light =1 AND User_cod_user = (SELECT cod_user FROM user WHERE email=%s)" % email # The query search for rooms that have the subscription on light services
+    cursor.execute(sql)
+    for j in range(cursor.rowcount): # If there are rooms, they are added to the Home instance that will handle the operations to be done
+      data = cursor.fetchone()
+      casa.AddRoom(data[1],data[4],data[6],data[7],data[8],data[9], data[5]) # Add the room in the instance
+    db.close()
+  except:
+    sys.exit("Connection to the database failed")
+  
+  try:
+    client = mqtt.Client()                # Create the client mqtt instance to send and retrieve messages to and from the broker 
+    client.connect(IPbroker, 1883, 60)    # Connection of the mqtt client instance to the broker (in our case the raspberry)
+    client.on_connect = on_connect        # Call the function to show the connection result
+    client.on_message = on_message        # Call the function to print the message coming from the broker
+    client.loop_start()             # Enter in the loop state the mqtt client connection
+
+    #List of callback function
+    client.message_callback_add(str(casa.code_owner) + "/Configuration", conf_callback)     # This topic is used to retrieve all messages coming from the web aplication
+    client.message_callback_add(str(casa.code_owner) + "/+/Light/Response", response_callback)  # This topic is used to retrieve the time passed since last movement perceived by the PIR sensor, to switch off the light for profile 2 and 3
+    client.message_callback_add(str(casa.code_owner) + "/+/Light/Observe", Listen_callback)   # This topic is used to retrieve the message about an eventual motion perceived by the PIR sensor for profile 3
+    client.message_callback_add(str(casa.code_owner) + "/+/Light/State", State_callback)    # This topic is used to retrieve all the changes of light on/off- ACK from Arduino
+  except:
+    sys.exit("Connection to the broker failed")
+  
+  #Starts the infinite loop that check the eventual operations to perform for every room
+  while (1):
+    if casa.nRooms>0: 
+      i=0
+      print "------------"
+      print "Number of rooms: " + str(casa.nRooms)
+      while i< len(casa.ControlLight):
+        casa.handleRoom(i,client) # Check the operation to perform for the room
+        # Show some detail about the rooms
+        print "- - -"
+        print "Room number: " + str(i)
+        print "Room name: " + casa.ControlLight[i].id
+        print "Profile: " + str(casa.ControlLight[i].profile)
+        print "State: " + str(casa.ControlLight[i].lighton)
+          i=i+1
+    else:
+      pass
+    time.sleep(timesleep)
+
+if __name__ == "__main__":
+  main()
+	</pre>
+</div>
+
+<div class="head">
+	home.py:
+	<pre class="brush: py">
+from controllight import ControlLight 
+import json
+import MySQLdb
+import sys
+import time
+from fileconfig import *
+class Home():
+
+  def __init__(self, id, email_owner): # Define the constructor method
+    self.id=id
+    self.nRooms=0
+    self.ControlLight=[] # Array where will be saved all the instances of the various room
+    self.email_owner=email_owner
+    self.getCode() # Function that retrieve the code of the user by the email from the database 
+
+  def AddRoom(self, nome, profilo, hon = None, mon = None, hoff = None, moff=None, threshold=None): # According to the profile perform the right "Add" in the system of the room already present in the database
+    flag=0
+    if profilo==0:
+      try:
+        self.AddRoom0(nome,profilo,flag)
+      except:
+        sys.exit("Error in adding room profile 0")
+    if profilo==1:
+      try:
+        self.AddRoom1(nome,profilo,flag,hon,mon,hoff,moff)
+      except:
+        sys.exit("Error in adding room profile 1")
+    if profilo==2:
+      try:
+        self.AddRoom2(nome,profilo,flag,threshold)
+      except:
+        sys.exit("Error in adding room profile 2")
+    if profilo==3:
+      try:
+        self.AddRoom3(nome,profilo,flag,threshold)
+      except:
+        sys.exit("Error in adding room profile 3")
+
+  def AddRoom0(self,nome, profilo, flag1):      #Perform the add in the system of a room with profile 0
+    roomnew = ControlLight(nome, profilo, flag1, self.code_owner)    # Create a new instance of the ControlLight class
+    self.ControlLight.append(roomnew)         # Append the instance in the array of the rooms
+    self.nRooms=self.nRooms+1             #Increment the numbers of the rooms in the array
+
+  def AddRoom1(self,nome, profilo, flag1, hon, mon, hoff, moff):  #Perform the add in the system of a room with profile 1
+    roomnew = ControlLight(nome, profilo, flag1, self.code_owner)         # Create a new instance of the ControlLight class
+    roomnew.AddParameters(hon, mon, hoff, moff)         # Set the parameters for the profile 1
+    self.ControlLight.append(roomnew)               # Append the instance in the array of the rooms
+    self.nRooms=self.nRooms+1                   #Increment the numbers of the rooms in the array
+
+  def AddRoom2(self,nome, profilo, flag1, threshold): #Perform the add in the system of a room with profile 2
+    roomnew = ControlLight(nome, profilo, flag1, self.code_owner)   # Create a new instance of the ControlLight class
+    roomnew.AddThreshold(threshold)         # Set the threshold for the profile 2
+    self.ControlLight.append(roomnew)         # Append the instance in the array of the rooms
+    self.nRooms=self.nRooms+1             #Increment the numbers of the rooms in the array
+
+  def AddRoom3(self,nome, profilo, flag1, threshold): #Perform the add in the system of a room with profile 3
+    roomnew = ControlLight(nome, profilo, flag1, self.code_owner)   # Create a new instance of the ControlLight class
+    roomnew.AddThreshold(threshold)         # Set the threshold for the profile 2
+    self.ControlLight.append(roomnew)         # Append the instance in the array of the rooms
+    self.nRooms=self.nRooms+1             #Increment the numbers of the rooms in the array
+
+  def DeleteRoom(self,nameRoom,client):                           # Perform the delete in the system of a room and set the retain message to void because in the broker is still present
+    i=self.SearchRoom(nameRoom)                             # Search the index of the room by the name in the array of the rooms
+    topic = str(self.code_owner) + "/" + self.ControlLight[i].id + "/Light/State"     # Identifies the topic to which send the retain's void message
+    try:
+      self.ControlLight.pop(i)                            # Delete the room from the system
+      self.nRooms=self.nRooms-1
+      client.publish(topic,"", qos=1, retain=True)                  # Send the retain void message
+    except:
+      sys.exit("Wrong Delete")
+
+  def DeleteForUpdate(self,nameRoom):   # Performs the delete from the system of the room that will be added back later
+    i=self.SearchRoom(nameRoom)     # Search the index of the room by the name in the array of the rooms
+    try:
+      self.ControlLight.pop(i)    # Delete the room from the system
+      self.nRooms=self.nRooms-1
+    except:
+      sys.exit("wrong delete")
+
+  def handleRoom(self, num_room, client):                   # According to the profile of the room the right function is executed
+    if self.ControlLight[num_room].profile == 0:
+      return
+    elif self.ControlLight[num_room].profile == 1:
+      self.ControlLight[num_room].PresetTurnOn(client)          #Control if is time to turn on the light
+      self.ControlLight[num_room].PresetTurnOff(client)           #Control if is time to turn off the light
+    elif self.ControlLight[num_room].profile == 2:
+      self.ControlLight[num_room].MonitorState(client)          #Control if is time to turn off the light for the threshold
+    elif self.ControlLight[num_room].profile == 3:
+      self.ControlLight[num_room].MonitorState(client)          #Control if is time to turn off the light for the threshold
+    return
+
+  def SearchRoom(self, nameRoom):   # Search the index of the room in the rooms array by the name
+    for i in range(self.nRooms):
+      try:
+        if self.ControlLight[i].id==nameRoom:
+          return i
+      except:
+        sys.exit("Error in searching for the room")
+
+  def ParseConfiguration(self, client, msg):  # According to the type and the profile fields in the json string (sent by the web) perform the right function and the insert/update/delete in the database
+    try:
+      obj_m = json.loads(str(msg))
+      if obj_m["Type"]=="AddRoom":
+        if obj_m["Profile"]==0:
+          self.AddRoom0(obj_m["Room"],obj_m["Profile"],0)
+          self.addRoomindb(obj_m)
+        elif obj_m["Profile"]==1:
+          self.AddRoom1(obj_m["Room"],obj_m["Profile"],0,obj_m["Hour_On"],obj_m["Minute_On"], obj_m["Hour_Off"],obj_m["Minute_Off"])
+          self.addRoomindb(obj_m) 
+        elif obj_m["Profile"]==2:
+          self.AddRoom2(obj_m["Room"],obj_m["Profile"],0,obj_m["Threshold"])
+          self.addRoomindb(obj_m) 
+        elif obj_m["Profile"]==3:
+          self.AddRoom3(obj_m["Room"],obj_m["Profile"],0,obj_m["Threshold"])
+          self.addRoomindb(obj_m)
+      elif obj_m["Type"]=="Change profile":
+        pos=self.SearchRoom(obj_m['Room'])
+        self.ChangeProfile(obj_m)
+        self.addRoomindb(obj_m)
+      elif obj_m["Type"]=="Change parameters":
+        pos=self.SearchRoom(obj_m['Room'])
+        self.ChangeParameters(obj_m,pos)
+        self.addRoomindb(obj_m) 
+      elif obj_m["Type"]=="Change threshold":
+        pos=self.SearchRoom(obj_m['Room'])
+        self.ChangeThreshold(obj_m,pos)
+        self.addRoomindb(obj_m)
+      elif obj_m["Type"]=="Delete Room Light":
+        print "delete room light"
+        self.DeleteRoom(obj_m['Room'],client)
+        self.DeleteRoomindb(obj_m)
+    except:
+      sys.exit("Error in Configuration")
+    return
+      
+  def ParseResponse(self, client, msg): #Used for profile 2 and 3, retrieve the period of time since last movement detected and then take the eventual decision to turn off the light
+    try:
+      obj_m = json.loads(str(msg)) # Decode the json 
+      pos=self.SearchRoom(obj_m["Room"])    
+      if obj_m["Type"]=="PIR": 
+        last_det=int(obj_m['LastDetection']) # Save the time passed from the last motion detection
+        pos=self.SearchRoom(obj_m['Room'])
+        self.ControlLight[pos].TakeDecision(client,last_det) # Take the decision
+    except:
+      sys.exit("Error in /Response")
+    return
+
+  def listen(self, client, msg):  # Used for profile 3, retrieve the message due to a motion seen by the sensor
+    try:
+      obj_m = json.loads(str(msg)) # Decode the json 
+      pos=self.SearchRoom(obj_m["Room"])
+      if (obj_m["Type"]=="PIR" and self.ControlLight[pos].profile==3):
+        if obj_m["Movement"] == "Yep!":
+          try:
+            self.ControlLight[pos].TurnOn(client) # Turn on the light 
+          except:
+            sys.exit("Error in switching the light when motion detected with profile 3")
+    except:
+      sys.exit("Error in /Observe")
+    return
+
+
+  def overAll(self, msg): # Used to detect a change of state in light (and update the lighton) from a retain message 
+    try:
+      obj_m = json.loads(str(msg)) # Decode the json 
+      pos=self.SearchRoom(obj_m['Room'])
+      if obj_m["State"]=="ON":
+        try:      
+          self.ControlLight[pos].SetOn(self.code_owner) # Set on the light (for the system)
+        except:
+          print "Error in setting on the light"
+      elif obj_m["State"]=="OFF":
+        try:
+          self.ControlLight[pos].SetOff(self.code_owner) # Set off the light (for the system)
+        except:
+          sys.exit("Error in setting off the light")
+    except:
+      print "I'm in except but nothing" # The message is empty due to the retain of the delete function: it does not find any room matching with the obj[State]!
+                        # This is not an error
+    return
+
+  def ChangeProfile(self,obj_m): # Perform the change profile in the system (deleting and then adding back)
+    self.DeleteForUpdate(obj_m["Room"])
+    if obj_m["Profile"]==0:
+      self.AddRoom0(obj_m["Room"],obj_m["Profile"],0)
+    if obj_m["Profile"]==1:
+      self.AddRoom1(obj_m["Room"],obj_m["Profile"],0,obj_m["Hour_On"],obj_m["Minute_On"], obj_m["Hour_Off"],obj_m["Minute_Off"])
+    elif obj_m["Profile"]==2:
+      self.AddRoom2(obj_m["Room"],obj_m["Profile"],0,obj_m["Threshold"])
+    elif obj_m["Profile"]==3:
+      self.AddRoom3(obj_m["Room"],obj_m["Profile"],0,obj_m["Threshold"])
+
+  def ChangeParameters(self,obj_m,i): #Update the parameters for profile 1
+    try:
+      self.ControlLight[i].UpdateParameters(obj_m["Hour_On"],obj_m["Minute_On"],obj_m["Hour_Off"],obj_m["Minute_Off"])
+    except:
+      sys.exit("Error in updating parameters")
+
+  def ChangeThreshold(self,obj_m,i): #update the threshold for profile 2 or 3
+    try:
+      self.ControlLight[i].UpdateThreshold(obj_m["Threshold"])
+    except:
+      sys.exit("Error in changing the threshold")
+
+
+  def addRoomindb(self,obj_m):
+    try:
+      db = MySQLdb.connect(hostdB,usernamedB,passworddB,dBname)
+      cursor = db.cursor()
+      name="'"+obj_m["Room"]+"'"
+      sql = "SELECT * from rooms where rooms.Name = %s AND user_cod_user = %d"% (name, self.code_owner) # this query check if the room already exist (created eventually by the temperature system)
+      time.sleep(0.3)       # 300 ms to avoid simultaneously delete of both temp and light
+      cursor.execute(sql)
+      if cursor.rowcount==1:    # If exist perform the UPDATE in db
+        if obj_m["Profile"]==0:
+          sql = "UPDATE rooms SET rooms.light=1, rooms.profile=0, rooms.Hour_On=NULL, rooms.Minute_On=NULL,rooms.Hour_Off=NULL, rooms.Minute_Off=NULL, rooms.Threshold=NULL WHERE rooms.Name=%s AND user_cod_user = %d "  % (name, self.code_owner) 
+        elif obj_m["Profile"]==1:
+          sql = "UPDATE rooms SET rooms.light=1, rooms.profile=1, rooms.Hour_On=%d, rooms.Minute_On=%d,rooms.Hour_Off=%d, rooms.Minute_Off=%d, rooms.Threshold=NULL WHERE rooms.Name=%s AND user_cod_user =%d"  % (obj_m["Hour_On"],obj_m["Minute_On"], obj_m["Hour_Off"],obj_m["Minute_Off"],name,self.code_owner)
+        elif obj_m["Profile"]==2: 
+          sql = "UPDATE rooms SET rooms.light=1, rooms.profile=2, rooms.Hour_On=NULL, rooms.Minute_On=NULL,rooms.Hour_Off=NULL, rooms.Minute_Off=NULL,rooms.Threshold=%d WHERE rooms.Name=%s AND user_cod_user = %d"  % (obj_m["Threshold"],name,self.code_owner) 
+        elif obj_m["Profile"]==3:
+          sql = "UPDATE rooms SET rooms.light=1, rooms.profile=3, rooms.Hour_On=NULL, rooms.Minute_On=NULL,rooms.Hour_Off=NULL, rooms.Minute_Off=NULL, rooms.Threshold=%d WHERE rooms.Name=%s AND user_cod_user = %d"  % (obj_m["Threshold"],name,self.code_owner) 
+      else:
+        if obj_m["Profile"]==0: # If doesn't exist perform the INSERT in db
+          sql = "INSERT INTO rooms(Cod_room,Name,Light,Temperature,Profile,User_cod_user) VALUES (NULL,%s,1,0,0,%d)" % (name,self.code_owner)
+        elif obj_m["Profile"]==1:
+          sql = "INSERT INTO rooms(Cod_room,Name,Light,Temperature,Profile,Hour_On,Minute_On,Hour_Off,Minute_Off,User_cod_user) VALUES (NULL,%s,1,0,1, %d, %d, %d, %d,%d)" % (name,obj_m["Hour_On"],obj_m["Minute_On"], obj_m["Hour_Off"],obj_m["Minute_Off"],self.code_owner)
+        elif obj_m["Profile"]==2:
+          sql = "INSERT INTO rooms(Cod_room,Name,Light,Temperature,Profile,Threshold,User_cod_user) VALUES (NULL,%s,1,0,2, %d,%d)" % (name,obj_m["Threshold"],self.code_owner)
+        elif obj_m["Profile"]==3:
+          sql = "INSERT INTO rooms(Cod_room,Name,Light,Temperature,Profile,Threshold,User_cod_user) VALUES (NULL,%s,1,0,3, %d,%d)" % (name,obj_m["Threshold"],self.code_owner)
+      try:
+        cursor.execute(sql)
+        db.commit()
+        print "Room added correctly in the db"
+      except:
+        sys.exit("Error in adding the room in the db")
+        db.rollback()
+      db.close()  
+    except:
+      sys.exit("Error in connecting to db")
+
+  def DeleteRoomindb(self,obj_m):
+    try:
+      db = MySQLdb.connect(hostdB,usernamedB,passworddB,dBname)
+      cursor = db.cursor()
+      name="'"+obj_m["Room"]+"'"
+      sql = "SELECT * FROM rooms where rooms.Name = %s AND user_cod_user = %d AND rooms.Temperature =1"% (name,self.code_owner) # This query check if the room has also the subscription to the temperature system
+      time.sleep(0.3) #100 ms to avoid simultaneously delete of both temp and light
+      cursor.execute(sql)
+      sql1 = "DELETE FROM light_read WHERE rooms_Cod_room = (SELECT Cod_room FROM rooms WHERE user_cod_user=%d AND Name = %s)"% (self.code_owner, name) # Before deleting a room, it is mandatory to delete from the DB all the records about the light lectures
+      if cursor.rowcount==1: # If the room has also a subscription to the temperature system
+        sql = "UPDATE rooms SET rooms.Light=0  WHERE rooms.Name=%s AND rooms.user_cod_user=%d"  % (name, self.code_owner) # It should be not deleted but only updated setting to zero the subscription on the light system
+      else: # If the room has no subscription to the temperature system
+        sql = "DELETE FROM rooms WHERE rooms.Name=%s AND rooms.user_cod_user=%d "% (name, self.code_owner) # The room is deleted from the database
+      try:
+        cursor.execute(sql1)
+        cursor.execute(sql)
+        db.commit()
+      except:
+        sys.exit("Error in deleting the room from the db")
+        db.rollback()
+      db.close()  
+    except:
+      sys.exit("Error in connecting to db")
+    
+  def getCode(self): # This function get the unique code of the user in the database from the email
+    try:
+      db = MySQLdb.connect(hostdB,usernamedB,passworddB,dBname)
+      cursor = db.cursor()
+      email="'"+self.email_owner+"'"
+      sql = "SELECT cod_user from user WHERE email = %s" % email
+      try:
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        self.code_owner=data[0]
+      except:
+        sys.exit("Error in getting the code from the db")
+        db.rollback()
+      db.close()  
+    except:
+      sys.exit("Error in connecting to db")   
+    
+	</pre>
+</div>
+
+<div class="head">
+	controllight.py:
+	<pre class="brush: py">
+import datetime
+import MySQLdb
+import json 
+from fileconfig import *
+
+class ControlLight():
+
+  def __init__(self, id, profile,lighton, code): # Define the constructor method
+    self.id = id
+    self.profile = profile
+    self.lighton = lighton
+    self.topic = str(code) + "/" + str(self.id) + "/Light"
+    self.seconds = 0 # This variable is used to count the time after which ask to Arduino if some movement was percieved in case of profile 2/3
+
+  def AddParameters(self,hon, mon, hoff, moff): # Set the attribute for profile 1
+    self.hon = hon
+    self.mon = mon
+    self.hoff = hoff
+    self.moff = moff
+
+  def  AddThreshold(self, threshold): # Set the threshold attribute
+    self.threshold=threshold
+
+  def  PresetTurnOn(self, client):                                # Define the moment when turn on the light with a predefined hour
+    ctime=datetime.datetime.now()                                 # Take the instant time
+    if (int(ctime.hour) == self.hon and int(ctime.minute) == self.mon and self.lighton==0):   # If the time correspond to the predefined hour turn on the light
+      self.TurnOn(client)
+    return
+
+  def  PresetTurnOff(self, client):                                 # Define the moment when turn off the light with a predefined hour
+    ctime=datetime.datetime.now()                                 # Take the instant time
+    if (int(ctime.hour) == self.hoff and int(ctime.minute) == self.moff and self.lighton==1):   # If the time correspond to the predefined hour turn off the light    
+      self.TurnOff(client)                                  # Insert a lecture in the database
+    return
+
+  def TurnOn(self, client):                 # Turn on the ligth from the system
+    if self.lighton==0:                 # If is previously turned off
+      client.publish(self.topic, msg_on, qos=1)     # Send the mqtt message to the arduino to turn on the light
+    return 
+
+  def TurnOff(self, client):                  # Turn off the ligth from the system
+    if self.lighton==1:                   # If is previously turned on
+      client.publish(self.topic, msg_off, qos=1)    # Send the mqtt message to the arduino to turn off the light
+    return 
+
+  def SetOn(self,code):         # Save the state of the light in the system
+    if self.lighton==0:     # If it is off
+      self.lighton=1      # Save the state
+      self.seconds=0
+      print "Switching ON the light in room: " + self.id
+      self.insertIndB(code) # Insert a lecture in the database
+    return
+
+  def SetOff(self,code):        # Save the state of the light in the system
+    if self.lighton==1:     # If it is on
+      self.lighton=0      # Save the state
+      self.seconds=0
+      print "Switching OFF the light in room: " + self.id
+      self.insertIndB(code)   # Insert a lecture in the database
+    return
+
+  def MonitorState(self, client): # This method every amount of time request to the arduino the state of the light (for profile 2 and 3) if it is still on
+    if self.lighton==1: # If the light is still on
+      self.seconds = self.seconds + timesleep 
+      if (self.seconds >= checktimeON): # Request the time remaining every checktimeON (=10) seconds (it will wait 12 in reality since timesleep = 3: 3 +3 + 3>10)
+        client.publish(self.topic, msgTimeOn, qos=1) # With a publish it request the arduino the amount of time since he last saw a movement, to turn off the light
+        self.seconds = 0
+      print "Seconds passed since I asked to Arduino about last movement: " + str(self.seconds)
+    return 
+
+  def TakeDecision(self,client,l_det): # If the time received from the arduino is higher that the threshold the light is turned off
+    if(l_det >self.threshold and self.lighton==1):  # Check if that time is higher than the threshold and the light is still on
+      self.TurnOff(client)
+    return
+
+  def UpdateThreshold(self, threshold): # Set the updated threshold
+    self.threshold=threshold
+
+  def UpdateParameters(self,hon, mon, hoff, moff): # Set the updated parameters
+    self.hon = hon
+    self.mon = mon
+    self.hoff = hoff
+    self.moff = moff
+
+  def insertIndB(self,code): # Insert in the DB the room's lectures of light
+    now = datetime.datetime.now()
+    try:
+      db = MySQLdb.connect(hostdB,usernamedB,passworddB,dBname)
+      cursor = db.cursor()
+      name = "'"+ self.id + "'"
+      sql = "INSERT INTO light_read(Cod_read,Status,Year,Month,Day,Hour,Minute,Profile,rooms_Cod_room) VALUES (NULL,%d,%d,%d,%d,%d,%d,%d,(SELECT Cod_room FROM rooms WHERE user_cod_user=%d AND Name = %s))" % (int(self.lighton),int(now.year),int(now.month),int(now.day),int(now.hour),int(now.minute),int(self.profile),code,name)
+      try:
+        cursor.execute(sql)
+        db.commit()
+      except:
+        sys.exit("Error in inserting in db")
+        db.rollback()
+      db.close()     
+    except:
+      sys.exit("Error in connecting do db")
+    
+		</pre>
+	</div>
+
+
+<div class="head">
+  fileconfig.py:
+  <pre class="brush: py">
+import json
+import sys
+
+info = "configuration.txt" # Extract from the file the IP of rasperry and database
+f = open(info, "r")
+try:
+  text = f.read()
+  obj = json.loads(str(text))
+  IPbroker = obj["IPbroker"]
+  hostdB = obj["hostdB"]
+  usernamedB=obj["usernamedB"]
+  passworddB=obj["passworddB"]
+  dBname=obj["dBname"]
+  timesleep = obj["Timesleep"]
+  checktimeON = obj["DelayForCheckingTimeON"]
+  obj_email = obj["Email"]
+  f.close()
+except:
+  sys.exit("Error in opening the file for retrieving the info")
+
+msg_on='{"command": "ON"}'
+msg_off= '{"command": "OFF"}'
+msgTimeOn = '{"command": "TimeOn"}'
+  </pre>
+</div>
+
+
+</div>
+
+
+
+<div role="tabpanel" class="tab-pane" id="TemperatureClient">
+	<div class="head">
+		client_temperature.py:
+		<pre class="brush: py">
+import paho.mqtt.client as mqtt     # Library for mqtt communication
+from controltemp import ControlTemp
+from home_temp import Home
+import json               # Library for handling json strings
+import time               # Library for the sleep function
+import MySQLdb              # Library to handle the Database
+import sys                # Library to handle system exceptions
+
+add = "file.txt"            # Extract from the file the user's email
+f = open(add, "r")
+try:
+  text = f.read()
+except:
+  sys.exit("Error in the acquisition of the user's email")
+f.close()
+
+obj_m = json.loads(str(text))
+
+casa = Home("",obj_m["Email"])            # Create an instance of the Home class to handle the various operations
+
+def on_connect(client, userdata, flags, rc):
+  print("Connected with result code "+str(rc))  # Show the connection result
+  client.subscribe("#")               # Perform the subscription on every topic
+
+def on_message(client, userdata, msg):
+  print(msg.topic+" "+str(msg.payload))     # Print the messages coming from the broker for every topic
+  
+def conf_callback(client, userdata, msg):
+  casa.ParseConfiguration(msg.payload)
+
+def control_callback(client, userdata, msg):
+  casa.ParseResponse(client, msg.payload)
+
+  
+def main():
+
+  client = mqtt.Client()              # Create the client mqtt instance to send and retrieve messages to and from the broker
+  try:
+    client.connect("192.168.1.254", 1883, 60)   # Connection of the mqtt client instance to the broker (in our case the raspberry)
+  except:
+    sys.exit("Connection to the device failed")
+
+  client.on_connect = on_connect          # Call the function to show the connection result
+  client.on_message = on_message          # Call the function to print the message coming from the broker
+  client.message_callback_add(str(casa.code_owner) + "/Configuration", conf_callback)       # This topic is used to retrieve all messages coming from the web aplication
+  client.message_callback_add(str(casa.code_owner) + "/+/Temperature/Response",control_callback)  # This topic is used to retrieve the response from the rooms about the values of temperature and humidity
+  
+  try:
+    db = MySQLdb.connect("192.168.1.8","Fla","","iot") #Connect to the database to retrieve the room already saved
+  except:
+    sys.exit("Connection to the database failed")
+  cursor = db.cursor()
+  email = "'"+casa.email_owner+"'"
+  sql = "SELECT * from rooms where rooms.Temperature =1 AND User_cod_user = (SELECT cod_user FROM user WHERE email=%s)" % email # The query search for rooms that have the subscription on temperature services
+  cursor.execute(sql)
+  for j in range(cursor.rowcount):        # If there are rooms, they are added to the Home instance that will handle the operatio to do
+    data = cursor.fetchone()          # fetchone takes the data row by row
+    casa.AddRoom(data[1], data[10], data[11])   # Add the room in the instance
+  
+  client.loop_start()               # Enter in the loop state the mqtt client connection
+  
+  #Starts the infinite loop that check the eventual operations to perform for every room
+  while True:
+    if casa.nRooms>0:
+      for i in range(casa.nRooms):
+        casa.handleRoom(i,client)
+      time.sleep(3600.0)
+  
+if __name__ == "__main__":
+  main()
+	</pre>
+</div>
+
+<div class="head">
+	home.py:
+	<pre class="brush: py">
+from controltemp import ControlTemp 
+import json
+import MySQLdb
+import datetime
+import sys
+
+class Home():
+
+  def __init__(self, id, email_owner):              # Define the constructor method
+    self.id = id
+    self.nRooms = 0
+    self.ControlTemp = []                     # Array where will be saved all the instances of the various rooms
+    self.email_owner = email_owner
+    self.getCode()                        # Function that retrieve the code of the user by the email from the database 
+
+  def AddRoom(self, name, threshold_low, threshold_high):     # Perform the add in the system of a room
+    roomnew = ControlTemp(name, threshold_low, threshold_high)  # Create a new instance of the ControlTemp class
+    self.ControlTemp.append(roomnew)              # Append the instance in the array of the rooms
+    self.nRooms = self.nRooms+1                 # Increment the number of the rooms in the array
+
+  def DeleteRoom(self, nameRoom):                 # Perform the delete in the system of a room
+    i = self.SearchRoom(nameRoom)               # Search the index of the room by the name in the array of the rooms
+    self.ControlTemp.pop(i)                   # Delete the room from the system
+    self.nRooms = self.nRooms-1                 # Decrease the number of the rooms in the array
+
+  def SearchRoom(self, nameRoom):                 # Search the index of the room in the rooms array by the name
+    for i in range(self.nRooms):
+      try:
+        if self.ControlTemp[i].id==nameRoom:
+          return i
+      except:
+        sys.exit("Error in searching for the room")
+    return
+
+  def ParseConfiguration(self, msg): # According to the type field in the json string (sent by the web) perform the right function and the insert/update/delete in the database
+    try:
+      obj_m = json.loads(str(msg))
+    except:
+      sys.exit("Error in retrieving the message from the web")
+      
+    if obj_m["Type"]=="Add Room":
+      try:
+        self.AddRoom(obj_m["Room"], float(obj_m["Threshold_Low"]), float(obj_m["Threshold_High"]))
+        self.addRoomindb(obj_m)
+      except:
+        sys.exit("Error in adding the room")
+      
+    elif obj_m["Type"]=="Change thresholds":
+      pos = self.SearchRoom(obj_m['Room'])
+      try:
+        self.ChangeThreshold(obj_m, pos)
+        self.addRoomindb(obj_m)
+      except:
+        sys.exit("Error in changing the thresholds")
+      
+    elif obj_m["Type"]=="Delete Room":
+      try:
+        self.DeleteRoom(obj_m['Room'])    
+        self.DeleteRoomindb(obj_m)
+      except:
+        sys.exit("Error in deleting the room")
+      
+    return
+      
+  def ParseResponse(self, client, msg):       # Handle the json string where are written temperature and humidity values (coming from the sensor)
+    obj_payload = str(msg)
+    try:
+      obj_msg = json.loads(obj_payload)   # Decode the json string
+    except:
+      sys.exit("Error in retrieving the message from sensor")
+  
+    if obj_msg["Type"] == "TempData":       # Type where are written temperature and humidity values
+      pos = self.SearchRoom(obj_msg["Room"])
+      temp = float(obj_msg["Temperature"])
+      hum = obj_msg["Humidity"]
+      print temp
+      print hum
+      self.insertLecturedb(obj_msg)                   # Insert in the database the values of temperature and humidity
+      self.ControlTemp[pos].turn_off(client,self.code_owner)      # Turn off the led (that represent the air-conditioning)
+      self.ControlTemp[pos].actuator(client,self.code_owner,temp,hum) # According to temperature and humidity values actuate on the air-conditioning
+    
+    elif obj_msg["Type"] == "TempCommands":
+      pass
+      
+    return
+    
+  def handleRoom(self, num_room, client):                 # For a given room, request temperature and humidity values
+    string = str(self.code_owner) + "/" + self.ControlTemp[num_room].id + "/Temperature" # Identify the topic according to the room ID
+    self.ControlTemp[num_room].get_temp(client, string)         # Request the values
+    return
+
+  def ChangeThreshold(self, obj_m, i):                  # Update the thresholds sent by the web used by the actuator
+    self.ControlTemp[i].UpdateThreshold(float(obj_m["Threshold_Low"]), float(obj_m["Threshold_High"]))
+
+  def addRoomindb(self, obj_m):
+    try:
+      db = MySQLdb.connect("192.168.1.8","Fla","","iot")
+      cursor = db.cursor()
+      name="'"+obj_m["Room"]+"'"
+      sql = "SELECT * FROM rooms WHERE rooms.Name = %s AND user_cod_user = %d"% (name, self.code_owner) # This query check if the room already exist (created eventually by the light system)
+      cursor.execute(sql)
+      if cursor.rowcount==1: # If exist perform the UPDATE in db
+        sql = "UPDATE rooms SET rooms.Temperature=1, rooms.Temp_Threshold_Low=%f, rooms.Temp_Threshold_High=%f  WHERE rooms.Name=%s AND rooms.user_cod_user=%d"  % (float(obj_m["Threshold_Low"]), float(obj_m["Threshold_High"]), name, self.code_owner) 
+      else: # If doesn't exist perform the INSERT in db
+        sql = "INSERT INTO rooms(Cod_room, Name, Light, Temperature, Temp_Threshold_Low, Temp_Threshold_High, user_cod_user) VALUES (NULL, %s, 0, 1, %f, %f, %d)" % (name, float(obj_m["Threshold_Low"]), float(obj_m["Threshold_High"]), self.code_owner)
+        
+      try:
+        cursor.execute(sql)
+        db.commit()
+      except:
+        sys.exit("Error in adding the room into the db")
+        db.rollback()
+      db.close()  
+    except:
+      sys.exit("Connection to the db failed ")
+
+  def DeleteRoomindb(self,obj_m):
+    try:
+      db = MySQLdb.connect("192.168.1.8","Fla","","iot")
+      cursor = db.cursor()
+      name="'"+obj_m["Room"]+"'"
+      sql = "SELECT * from rooms where rooms.Light =1 AND user_cod_user = %d AND Name = %s" % (self.code_owner, name) # This query check if the room has also the subscription to the light system
+      cursor.execute(sql)
+      sql1 = "DELETE FROM temp_read WHERE rooms_Cod_room = (SELECT Cod_room FROM rooms WHERE user_cod_user=%d AND Name = %s)"% (self.code_owner, name) # Before deleting a room, it is mandatory to delete from the DB all the records about the temperature lectures
+      if cursor.rowcount==1:  # If the room has also a subscription to the light system
+        sql = "UPDATE rooms SET rooms.Temperature=0  WHERE rooms.Name=%s AND rooms.user_cod_user=%d"  % (name, self.code_owner) # It should be not deleted but only updated setting to zero the subscription on the temperature system
+      else:           # If the room has no subscription to the temperature system
+        sql = "DELETE FROM rooms WHERE rooms.Name=%s AND rooms.user_cod_user=%d "% (name, self.code_owner) # The room is deleted from the database
+      try:
+        cursor.execute(sql1)
+        cursor.execute(sql)
+        db.commit()
+      except:
+        sys.exit("Error in deleting the room into the db")
+        db.rollback()
+      db.close()  
+    except:
+      sys.exit("Connection to the db failed ")
+    
+  def getCode(self): # This function get the unique code of the user in the database from the email
+    try:
+      db = MySQLdb.connect("192.168.1.8","Fla","","iot")
+      cursor = db.cursor()
+      email="'"+self.email_owner+"'"
+      sql = "SELECT cod_user from user WHERE email = %s" % email
+      try:
+        cursor.execute(sql)
+        data = cursor.fetchone()
+        self.code_owner=data[0]
+      except:
+        sys.exit("Error in getting the code from the db")
+        db.rollback()
+      db.close()
+    except:
+      sys.exit("Connection to the db failed ")
+
+  def insertLecturedb(self, obj_m): # Insert lectures of light and humidity in the database
+    try:
+      db = MySQLdb.connect("192.168.1.8","Fla","","iot")
+      cursor = db.cursor()
+      name="'"+obj_m["Room"]+"'"
+      now = datetime.datetime.now()
+      sql = "INSERT INTO temp_read(Cod_read, Val_Temp, Val_Hum, Year, Month, Day, Hour, Minute, rooms_Cod_room) VALUES (NULL, %f, %f, %d, %d, %d, %d, %d, (SELECT Cod_room FROM rooms WHERE rooms.Name=%s AND rooms.user_cod_user = %d))" % (obj_m["Temperature"], obj_m["Humidity"], int(now.year), int(now.month), int(now.day), int(now.hour), int(now.minute), name, self.code_owner)
+      try:
+        cursor.execute(sql)
+        db.commit()
+      except:
+        db.rollback()
+      db.close()
+    except:
+      sys.exit("Connection to the db failed ")
+    
+    
+	</pre>
+</div>
+
+<div class="head">
+	controltemp.py:
+	<pre class="brush: py">
+import paho.mqtt.client as mqtt
+import json
+
+msg  = '{"command": "GetTemp"}'   # Request the temperature and the humidity values
+msg1 = '{"command": "TempUp"}'    # Heating needed
+msg2 = '{"command": "TempDown"}'    # Cooling needed
+msg3 = '{"command": "TempOk"}'    # Temperature in the range
+msg4 = '{"command": "TempLedOff"}'  # Turn off the led
+msg5 = '{"command": "HumWarning"}'  # Humidity value too low or too high
+
+class ControlTemp():
+  
+  def __init__(self, id, threshold_low, threshold_high):  # Define the constructor method
+    self.id = id
+    self.threshold_low = float(threshold_low)
+    self.threshold_high = float(threshold_high)
+    self.hum_low = 20.0                 # Humidity values are setted to a constant value because we have not an actuator for that
+    self.hum_high = 80.0
+    
+  def get_temp(self, client, topic):            # Through the publish, it requests temperature and humidity values to the sensor
+    client.publish(topic, msg)
+    
+  def actuator(self, client, code_owner, temp, hum):    # According to the thresholds set and the temperature sensed, perform the proper function
+    print self.threshold_low
+    print self.threshold_high
+    print temp
+    string_msg = str(code_owner) + "/" + self.id + "/Temperature"
+
+    if temp < self.threshold_low: 
+      client.publish(string_msg, msg1)
+      print "Heating needed"
+      
+    elif temp > self.threshold_high:
+      client.publish(string_msg, msg2)  
+      print "Cooling needed"
+      
+    else:
+      client.publish(string_msg, msg3)  
+      print "Temperature in the range"
+    
+    # For humidity actually we have not the actuator
+    if hum < self.hum_low:
+      client.publish(string_msg, msg5)
+      print "Humidity value too low"
+    
+    elif hum > self.hum_high:
+      client.publish(string_msg, msg5)
+      print "Humidity value too high"
+      
+    else:
+      print "Humidity under control"
+    
+  def UpdateThreshold(self, threshold_low, threshold_high):   # Set the new thresholds sent by the web
+    self.threshold_low = threshold_low
+    self.threshold_high = threshold_high
+    return
+    
+  def turn_off(self, client, code_owner):           # Turn off the led
+    string_msg = str(code_owner) + "/" + self.id + "/Temperature"
+    client.publish(string_msg, msg4)
+	</pre>
+</div>
+
+    </div>
+    <div role="tabpanel" class="tab-pane" id="Download" style="padding-top:200px">
+    	<a href="https://www.dropbox.com/sh/ujo5qqh5gu96bao/AAD9iPPEnCoQDBEYJOLrgdE3a?dl=0"><button type="button" class="btn btn-primary center-block">Download</button></a>
+	</div>
+  </div>
+
+</div>
+
+		
+		<div style="padding: 100px"></div>
+
+	</div>
+
+<!-- Small modal -->
+<div class="modal fade bs-example-modal-sm" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" id="myModal" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <br>
+           <div class="bs-example bs-example-tabs" style="padding-left: 10px;padding-right: 10px">
+              <ul id="myTab" class="nav nav-tabs" style="padding-left: 10px;padding-right: 10px">
+                <li class="active"><a href="#signin" data-toggle="tab">Sign In</a></li>
+                <li><a href="#register" data-toggle="tab">Register</a></li>
+                  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+              </ul>
+          </div>
+
+        <div class="modal-body">
+        <div id="myTabContent" class="tab-content">
+        <div class="tab-pane fade active in" id="signin">
+          <form method="post" action="php/login.php" name ="register">
+            <fieldset>
+          <div class="form-group" style="padding-top: 5px">
+            <div class="input-group">
+              <input type="email" class="form-control" name="email" placeholder="Email">
+              <label for="uLogin" class="input-group-addon glyphicon glyphicon-user"></label>
+            </div>
+          </div> <!-- /.form-group -->
+          <div class="form-group">
+            <div class="input-group">
+              <input type="password" class="form-control" name="password" placeholder="Password">
+              <label for="uPassword" class="input-group-addon glyphicon glyphicon-lock"></label>
+            </div>
+          </div> 
+          <div class="checkbox" style="padding-top: 5px;padding-bottom: 10px">
+            <label>
+              <input type="checkbox"> Remember me
+            </label>
+          </div> 
+            <div class="modal-footer">
+              <button type="submit" class="form-control btn btn-primary" name="SignIn">Sign In</button>
+            </div>
+            </fieldset>
+          </form>
+          </div>
+
+        <div class="tab-pane fade" id="register">
+            <form method="post" action="php/register.php" name ="register">
+              <fieldset>
+                  <div class="form-group">
+                    <p>Name</p>
+              <input type="text" name="name" class="form-control" placeholder="Name"></input>
+            </div>
+            <div class="form-group">
+              <p>Surname</p>
+              <input type="text" name="surname" class="form-control" placeholder="Surname"></input>
+            </div>
+                <div class="form-group">
+              <p>Email address</p>
+              <input type="email" name="email" class="form-control" placeholder="Email"></input>
+            </div>
+            <div class="form-group">
+              <p>Password</p>
+              <input type="password" name="password" class="form-control" placeholder="Password"></input> 
+            </div>
+            <div class="form-group">
+              <p id="errors"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="form-control btn btn-primary" name="Register">Register</button>
+              </div>
+          </fieldset>
+            </form>
+          </div>
+         </div> <!-- Mytab content-->
+     </div> <!--modal body -->
+    </div>
+  </div>
+</div> <!--End Small Modal -->
+
+
+
+	<!-- FOOTER -->
+	<footer class="footer">
+		<div class="container">
+			<button type="button" class="btn btn-link btn-sm center-block" id="view-full" style="color:gray">Desktop Mode</button>
+		</div>
+		<div class="footer-background">
+			<div class="container">
+				<p class="text-footer">&#169; 2015 All Rights Reserved. &#169; Andrian 	Putina</p>
+			</div>
+		</div>
+	</footer>
+	<!-- END FOOTER -->
+
+
+  <script src="js/shCore.js"></script>
+  <script src="js/shBrushCpp.js"></script>
+    <script src="js/shBrushPython.js"></script>
+  <script>
+    SyntaxHighlighter.all()
+  </script>
+
+
+
+
+
+
+	<script src="js/jquery-2.2.1.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+
+	<?php 
+		include 'php/errors.php';
+	?>
+
+
+	<script>
+	$(document).ready(function(){
+		$('#view-full').bind('click',function(){
+			$('meta[name="viewport"]').attr('content','width=1200');
+		});
+
+	});
+	</script>
+</body>
+</html>
