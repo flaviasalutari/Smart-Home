@@ -1,0 +1,10 @@
+{
+"IPbroker":"192.168.1.254",
+"hostdB":"192.168.1.2",
+"usernamedB": "Fla",
+"passworddB": "",
+"dBname": "iot",
+"Timesleep":3,
+"DelayForCheckingTimeON":10,
+"Email":"piero.dellafrancesca@gmail.com"
+}
